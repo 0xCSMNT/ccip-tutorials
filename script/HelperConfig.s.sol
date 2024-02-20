@@ -47,5 +47,9 @@ contract HelperConfig is Script {
         emit HelperConfig__CreatedMockRouter(address(router));
 
         anvilNetworkConfig.router = address(router);
+        anvilNetworkConfig.linkToken = 0x779877A7B0D9E8603169DdbD7836e478b4624789; // same as sepolia
+        anvilNetworkConfig.destinationChainId = 12532609583862916517; // polygon mumbai
+
+        return anvilNetworkConfig;
     }
 }
