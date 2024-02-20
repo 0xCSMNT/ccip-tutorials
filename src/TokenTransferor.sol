@@ -278,4 +278,12 @@ contract TokenTransferor is OwnerIsCreator {
 
         IERC20(_token).transfer(_beneficiary, amount);
     }
+
+    function getRouterAddress() public view returns (address) {
+        return address(s_router);
+    }
+
+    function getLinkTokenAddress() public view returns (address) {
+        return address(s_linkToken);
+    }
 }

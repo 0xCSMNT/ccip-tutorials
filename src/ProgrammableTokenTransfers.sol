@@ -339,7 +339,7 @@ contract ProgrammableTokenTransfers is CCIPReceiver, OwnerIsCreator {
                 tokenAmounts: tokenAmounts, // The amount and type of token being transferred
                 extraArgs: Client._argsToBytes(
                     // Additional arguments, setting gas limit
-                    Client.EVMExtraArgsV1({gasLimit: 200_000})
+                    Client.EVMExtraArgsV1({gasLimit: 500_000})
                 ),
                 // Set the feeToken to a feeTokenAddress, indicating specific asset will be used for fees
                 feeToken: _feeTokenAddress

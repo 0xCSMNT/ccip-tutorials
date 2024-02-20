@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {TokenTransferor} from "../src/TokenTransferor.sol";
+import {ProgrammableTokenTransfers} from "../src/ProgrammableTokenTransfers.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {MockCCIPRouter} from "test/mock/MockRouter.sol";
 import {MockLinkToken, MockCCIPBnMToken} from "test/mock/DummyTokens.sol";
@@ -11,6 +12,7 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 
 contract UnitTests is StdCheats, Test {
     TokenTransferor public tokenTransferor;
+    ProgrammableTokenTransfers public receiver;
     MockCCIPRouter public router;
     MockLinkToken public linkToken;
     MockCCIPBnMToken public ccipBnM;
@@ -32,6 +34,11 @@ contract UnitTests is StdCheats, Test {
         ccipBnM = new MockCCIPBnMToken();
 
         tokenTransferor = new TokenTransferor(
+            address(router),
+            address(linkToken)
+        );
+
+        receiver = new ProgrammableTokenTransfers(
             address(router),
             address(linkToken)
         );
@@ -59,6 +66,18 @@ contract UnitTests is StdCheats, Test {
         );
     }
 
+    function testCorrectAddressesForRouterAndLinkToken() public {
+        //check that the router and link token addresses are correct on TokenTransferor
+        assertTrue(
+            address(router) == tokenTransferor.getRouterAddress(),
+            "Router address is not correct"
+        );
+        assertTrue(
+            address(linkToken) == tokenTransferor.getLinkTokenAddress(),
+            "Link token address is not correct"
+        );
+    }
+
     function testTransferTokensHasTokens() public {
         transferTokensToTokenTransferor();
         uint256 linkBalance = linkToken.balanceOf(address(tokenTransferor));
@@ -74,4 +93,26 @@ contract UnitTests is StdCheats, Test {
             "TokenTransferor does not have the correct amount of ccipBnM tokens"
         );
     }
+
+    function testTransferTokenPayLINK() public {
+    transferTokensToTokenTransferor();
+    tokenTransferor.transferTokensPayLINK(
+        uint64(12532609583862916517),
+        address(receiver),
+        address(ccipBnM),
+        uint256(TOKEN_TRANSFER_AMOUNT)
+    );
+
+    // Log balances in wei for clarity and direct comparison
+    uint256 receiverBalance = ccipBnM.balanceOf(address(receiver));
+    uint256 tokenTransferorBalance = ccipBnM.balanceOf(address(tokenTransferor));
+
+    console2.log("Receiver Balance (wei): ", receiverBalance);
+    console2.log("TOKEN_TRANSFER_AMOUNT (wei): ", TOKEN_TRANSFER_AMOUNT);
+    console2.log("TokenTransferor balance (wei): ", tokenTransferorBalance);
+
+    // Assert that DEV_ACCOUNT_1's balance matches the expected transfer amount
+    assertEq(receiverBalance, TOKEN_TRANSFER_AMOUNT, "receiver did not receive the expected amount of tokens.");
+}
+
 }

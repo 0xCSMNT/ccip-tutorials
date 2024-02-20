@@ -23,7 +23,7 @@ contract MockCCIPRouter is IRouter, IRouterClient {
   event MessageExecuted(bytes32 messageId, uint64 sourceChainSelector, address offRamp, bytes32 calldataHash);
 
   uint16 public constant GAS_FOR_CALL_EXACT_CHECK = 5_000;
-  uint64 public constant DEFAULT_GAS_LIMIT = 200_000;
+  uint64 public constant DEFAULT_GAS_LIMIT = 500_000;
 
   function routeMessage(
     Client.Any2EVMMessage calldata message,
