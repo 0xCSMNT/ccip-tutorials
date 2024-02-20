@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 import {MockCCIPRouter} from "test/mock/MockRouter.sol";
-import {MockLinkToken, MockCCIPBnMToken} from "test/mock/DummyTokens.sol";
 import {Script} from "forge-std/Script.sol";
 
 contract HelperConfig is Script {
@@ -43,14 +42,12 @@ contract HelperConfig is Script {
     {
         vm.startBroadcast();
         MockCCIPRouter router = new MockCCIPRouter();
-        MockLinkToken linkToken = new MockLinkToken(); 
-        MockCCIPBnMToken ccipBnM = new MockCCIPBnMToken();       
         vm.stopBroadcast();
 
         emit HelperConfig__CreatedMockRouter(address(router));
 
         anvilNetworkConfig.router = address(router);
-        anvilNetworkConfig.linkToken = address(linkToken); // same as sepolia
+        anvilNetworkConfig.linkToken = address(0x779877A7B0D9E8603169DdbD7836e478b4624789); // same as sepolia
         anvilNetworkConfig.destinationChainId = 12532609583862916517; // polygon mumbai
 
         return anvilNetworkConfig;
