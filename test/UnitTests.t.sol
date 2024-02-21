@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import {Test, console2} from "forge-std/Test.sol";
 import {TokenTransferor} from "../src/TokenTransferor.sol";
 import {ProgrammableTokenTransfers} from "../src/ProgrammableTokenTransfers.sol";
+import {TransferorWithCalls} from "../src/TransferorWithCalls.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {MockCCIPRouter} from "test/mock/MockRouter.sol";
 import {MockLinkToken, MockCCIPBnMToken} from "test/mock/DummyTokens.sol";
@@ -14,6 +15,8 @@ contract UnitTests is StdCheats, Test {
     TokenTransferor public tokenTransferor;
     ProgrammableTokenTransfers public receiver;
     ProgrammableTokenTransfers public sender;
+    TransferorWithCalls public receiverWithCalls;
+    TransferorWithCalls public senderWithCalls;
     MockCCIPRouter public router;
     MockLinkToken public linkToken;
     MockCCIPBnMToken public ccipBnM;
@@ -49,10 +52,25 @@ contract UnitTests is StdCheats, Test {
             address(linkToken)
         );
 
+        receiverWithCalls = new TransferorWithCalls(
+            address(router),
+            address(linkToken)
+        );
+
+        senderWithCalls = new TransferorWithCalls(
+            address(router),
+            address(linkToken)
+        );
+
         tokenTransferor.allowlistDestinationChain(12532609583862916517, true);
+        
         sender.allowlistDestinationChain(12532609583862916517, true);
         receiver.allowlistSourceChain(16015286601757825753, true);
         receiver.allowlistSender(address(sender), true);
+
+        senderWithCalls.allowlistDestinationChain(12532609583862916517, true);
+        receiverWithCalls.allowlistSourceChain(16015286601757825753, true);
+        receiverWithCalls.allowlistSender(address(senderWithCalls), true);
     }
 
     ////////// HELPER FUNCTIONS //////////
@@ -73,6 +91,30 @@ contract UnitTests is StdCheats, Test {
         ccipBnM.transfer(address(sender), TOKEN_MINT_BALANCE);
 
         vm.stopPrank();
+    }
+
+    function transferTokensToSenderWithCalls() public {
+        vm.startPrank(DEV_ACCOUNT_0);
+
+        linkToken.transfer(address(senderWithCalls), TOKEN_MINT_BALANCE);
+        ccipBnM.transfer(address(senderWithCalls), TOKEN_MINT_BALANCE);
+
+        vm.stopPrank();
+    }
+
+    function addressToString(
+        address _addr
+    ) internal pure returns (string memory) {
+        bytes32 value = bytes32(uint256(uint160(_addr)));
+        bytes memory alphabet = "0123456789abcdef";
+        bytes memory str = new bytes(42); // 2 character prefix + 40 characters for the address
+        str[0] = "0";
+        str[1] = "x";
+        for (uint256 i = 0; i < 20; i++) {
+            str[2 + i * 2] = alphabet[uint8(value[i + 12] >> 4)];
+            str[3 + i * 2] = alphabet[uint8(value[i + 12] & 0x0f)];
+        }
+        return string(str);
     }
 
     ////////// TEST FUNCTIONS //////////
@@ -163,17 +205,17 @@ contract UnitTests is StdCheats, Test {
         string memory messageSent = "Hello, World!";
         sender.sendMessagePayLINK(
             uint64(12532609583862916517),
-            address(receiver),            
+            address(receiver),
             string(messageSent),
             address(ccipBnM),
             uint256(TOKEN_TRANSFER_AMOUNT)
         );
 
-        (, string memory messageReceived, , uint256 tokensReceived ) = receiver
+        (, string memory messageReceived, , uint256 tokensReceived) = receiver
             .getLastReceivedMessageDetails();
 
         console2.log("Message Received: ", messageReceived);
-        console2.log("TokensRecieved: ", tokensReceived / 1e18);
+        console2.log("TokensReceived: ", tokensReceived / 1e18);
 
         assertEq(
             messageReceived,
@@ -187,5 +229,20 @@ contract UnitTests is StdCheats, Test {
             "receiver did not receive the expected amount of tokens."
         );
     }
-    // Test that the sender can call a function on the receiver
+
+    // Test that the sender can call a read function on the receiver
+    function testGetTokenBalanceOnReceiver() public {
+        transferTokensToSender();
+        // address tokenAddress = address(ccipBnM);
+        // bytes memory messageSent = abi.encodeWithSignature("getTokenBalance(address)", tokenAddress);
+        // console2.log("Token Address: ", tokenAddress);
+        string memory messageSent = "getTokenBalance(address)";
+        sender.sendMessagePayLINK(
+            uint64(12532609583862916517),
+            address(receiver),
+            string(messageSent),
+            address(ccipBnM),
+            uint256(TOKEN_TRANSFER_AMOUNT)
+        );
+    }
 }

@@ -14,7 +14,7 @@ import {IERC20} from "@chainlink/contracts-ccip/src/v0.8/vendor/openzeppelin-sol
  */
 
 /// @title - A simple messenger contract for transferring/receiving tokens and data across chains.
-contract ProgrammableTokenTransfers is CCIPReceiver, OwnerIsCreator {
+contract TransferorWithCalls is CCIPReceiver, OwnerIsCreator {
     // Custom errors to provide more descriptive revert messages.
     error NotEnoughBalance(uint256 currentBalance, uint256 calculatedFees); // Used to make sure contract has enough balance to cover the fees.
     error NothingToWithdraw(); // Used when trying to withdraw Ether but there's nothing to withdraw.
