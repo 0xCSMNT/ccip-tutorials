@@ -169,15 +169,22 @@ contract UnitTests is StdCheats, Test {
             uint256(TOKEN_TRANSFER_AMOUNT)
         );
 
-        (, string memory messageReceived, , ) = receiver
+        (, string memory messageReceived, , uint256 tokensReceived ) = receiver
             .getLastReceivedMessageDetails();
 
         console2.log("Message Received: ", messageReceived);
+        console2.log("TokensRecieved: ", tokensReceived / 1e18);
 
         assertEq(
             messageReceived,
             messageSent,
             "Message received by receiver does not match the message sent by sender"
+        );
+
+        assertEq(
+            tokensReceived,
+            TOKEN_TRANSFER_AMOUNT,
+            "receiver did not receive the expected amount of tokens."
         );
     }
     // Test that the sender can call a function on the receiver
