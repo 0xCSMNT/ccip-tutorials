@@ -13,6 +13,7 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 contract UnitTests is StdCheats, Test {
     TokenTransferor public tokenTransferor;
     ProgrammableTokenTransfers public receiver;
+    ProgrammableTokenTransfers public sender;
     MockCCIPRouter public router;
     MockLinkToken public linkToken;
     MockCCIPBnMToken public ccipBnM;
@@ -43,6 +44,11 @@ contract UnitTests is StdCheats, Test {
             address(linkToken)
         );
 
+        sender = new ProgrammableTokenTransfers(
+            address(router),
+            address(linkToken)
+        );
+
         tokenTransferor.allowlistDestinationChain(12532609583862916517, true);
     }
 
@@ -53,6 +59,15 @@ contract UnitTests is StdCheats, Test {
 
         linkToken.transfer(address(tokenTransferor), TOKEN_MINT_BALANCE);
         ccipBnM.transfer(address(tokenTransferor), TOKEN_MINT_BALANCE);
+
+        vm.stopPrank();
+    }
+
+    function transferTokensToSender() public {
+        vm.startPrank(DEV_ACCOUNT_0);
+
+        linkToken.transfer(address(sender), TOKEN_MINT_BALANCE);
+        ccipBnM.transfer(address(sender), TOKEN_MINT_BALANCE);
 
         vm.stopPrank();
     }
@@ -86,7 +101,8 @@ contract UnitTests is StdCheats, Test {
             linkBalance == TOKEN_MINT_BALANCE,
             "TokenTransferor does not have the correct amount of link tokens"
         );
-        console2.log("linkBalance: ", linkBalance / 1e18);
+        console2.log("TokenTransferorCCIPBnMBalance: ", ccipBnMBalance / 1e18);
+        console2.log("TokenTransferorLinkBalance: ", linkBalance / 1e18);
         console2.log("TOKEN_MINT_BALANCE: ", TOKEN_MINT_BALANCE / 1e18);
         assertTrue(
             ccipBnMBalance == TOKEN_MINT_BALANCE,
@@ -94,25 +110,50 @@ contract UnitTests is StdCheats, Test {
         );
     }
 
+    function testSenderHasTokens() public {
+        transferTokensToSender();
+        uint256 linkBalance = linkToken.balanceOf(address(sender));
+        uint256 ccipBnMBalance = ccipBnM.balanceOf(address(sender));
+        assertTrue(
+            linkBalance == TOKEN_MINT_BALANCE,
+            "Sender does not have the correct amount of link tokens"
+        );
+        assertTrue(
+            ccipBnMBalance == TOKEN_MINT_BALANCE,
+            "Sender does not have the correct amount of ccipBnM tokens"
+        );
+    }
+
     function testTransferTokenPayLINK() public {
-    transferTokensToTokenTransferor();
-    tokenTransferor.transferTokensPayLINK(
-        uint64(12532609583862916517),
-        address(receiver),
-        address(ccipBnM),
-        uint256(TOKEN_TRANSFER_AMOUNT)
-    );
+        transferTokensToTokenTransferor();
+        tokenTransferor.transferTokensPayLINK(
+            uint64(12532609583862916517),
+            address(receiver),
+            address(ccipBnM),
+            uint256(TOKEN_TRANSFER_AMOUNT)
+        );
 
-    // Log balances in wei for clarity and direct comparison
-    uint256 receiverBalance = ccipBnM.balanceOf(address(receiver));
-    uint256 tokenTransferorBalance = ccipBnM.balanceOf(address(tokenTransferor));
+        // Log balances in wei for clarity and direct comparison
+        uint256 receiverBalance = ccipBnM.balanceOf(address(receiver));
+        uint256 tokenTransferorBalance = ccipBnM.balanceOf(
+            address(tokenTransferor)
+        );
 
-    console2.log("Receiver Balance (wei): ", receiverBalance);
-    console2.log("TOKEN_TRANSFER_AMOUNT (wei): ", TOKEN_TRANSFER_AMOUNT);
-    console2.log("TokenTransferor balance (wei): ", tokenTransferorBalance);
+        console2.log("Receiver Balance: ", receiverBalance / 1e18);
+        console2.log("TOKEN_TRANSFER_AMOUNT: ", TOKEN_TRANSFER_AMOUNT / 1e18);
+        console2.log(
+            "TokenTransferor balance: ",
+            tokenTransferorBalance / 1e18
+        );
 
-    // Assert that DEV_ACCOUNT_1's balance matches the expected transfer amount
-    assertEq(receiverBalance, TOKEN_TRANSFER_AMOUNT, "receiver did not receive the expected amount of tokens.");
-}
+        // Assert that DEV_ACCOUNT_1's balance matches the expected transfer amount
+        assertEq(
+            receiverBalance,
+            TOKEN_TRANSFER_AMOUNT,
+            "receiver did not receive the expected amount of tokens."
+        );
+    }
+    // Test that the sender can transfer tokens and message to the receiver
 
+    // Test that the sender can call a function on the receiver
 }
