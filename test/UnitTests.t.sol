@@ -50,6 +50,9 @@ contract UnitTests is StdCheats, Test {
         );
 
         tokenTransferor.allowlistDestinationChain(12532609583862916517, true);
+        sender.allowlistDestinationChain(12532609583862916517, true);
+        receiver.allowlistSourceChain(16015286601757825753, true);
+        receiver.allowlistSender(address(sender), true);
     }
 
     ////////// HELPER FUNCTIONS //////////
@@ -153,7 +156,29 @@ contract UnitTests is StdCheats, Test {
             "receiver did not receive the expected amount of tokens."
         );
     }
-    // Test that the sender can transfer tokens and message to the receiver
 
+    // Test that the sender can transfer tokens and message to the receiver
+    function testSendMessagePayLINK() public {
+        transferTokensToSender();
+        string memory messageSent = "Hello, World!";
+        sender.sendMessagePayLINK(
+            uint64(12532609583862916517),
+            address(receiver),            
+            string(messageSent),
+            address(ccipBnM),
+            uint256(TOKEN_TRANSFER_AMOUNT)
+        );
+
+        (, string memory messageReceived, , ) = receiver
+            .getLastReceivedMessageDetails();
+
+        console2.log("Message Received: ", messageReceived);
+
+        assertEq(
+            messageReceived,
+            messageSent,
+            "Message received by receiver does not match the message sent by sender"
+        );
+    }
     // Test that the sender can call a function on the receiver
 }
