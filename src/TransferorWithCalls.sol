@@ -6,6 +6,7 @@ import {OwnerIsCreator} from "@chainlink/contracts-ccip/src/v0.8/shared/access/O
 import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
 import {CCIPReceiver} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
 import {IERC20} from "@chainlink/contracts-ccip/src/v0.8/vendor/openzeppelin-solidity/v4.8.0/contracts/token/ERC20/IERC20.sol";
+import {console2} from "forge-std/Test.sol";
 
 /**
  * THIS IS AN EXAMPLE CONTRACT THAT USES HARDCODED VALUES FOR CLARITY.
@@ -47,7 +48,7 @@ contract TransferorWithCalls is CCIPReceiver, OwnerIsCreator {
     );
 
     // Event emitted when the contract balance is checked.
-    event BalanceChecked(uint256 balance);
+    event EthBalance(uint256 balance);
 
     bytes32 private s_lastReceivedMessageId; // Store the last received messageId.
     address private s_lastReceivedTokenAddress; // Store the last received token address.
@@ -288,25 +289,31 @@ contract TransferorWithCalls is CCIPReceiver, OwnerIsCreator {
     /// handle a received message
     function _ccipReceive(
         Client.Any2EVMMessage memory any2EvmMessage
-    )
-        internal
-        override
-        onlyAllowlisted(
-            any2EvmMessage.sourceChainSelector,
-            abi.decode(any2EvmMessage.sender, (address))
-        ) // Make sure source chain and sender are allowlisted
-    {
-        s_lastReceivedMessageId = any2EvmMessage.messageId; // fetch the messageId
-        s_lastReceivedText = abi.decode(any2EvmMessage.data, (string)); // abi-decoding of the sent text
-        // Expect one token to be transferred at once, but you can transfer several tokens.
-        s_lastReceivedTokenAddress = any2EvmMessage.destTokenAmounts[0].token;
+    ) internal override {
+        // Decoding the messageId and sourceChainSelector remains the same
+        s_lastReceivedMessageId = any2EvmMessage.messageId;
+
+        // Decoding the encoded data to match the tuple structure of (string, address)
+        (string memory decodedText, address decodedTokenAddress) = abi.decode(
+            any2EvmMessage.data,
+            (string, address)
+        );
+
+        // Now `decodedText` contains the message text, and `decodedTokenAddress` contains the token address
+        s_lastReceivedText = decodedText;
+
+        // Assuming you have corresponding storage or handling for the decoded token address
+        s_lastReceivedTokenAddress = decodedTokenAddress;
+
+        // Handling for token amounts remains the same
         s_lastReceivedTokenAmount = any2EvmMessage.destTokenAmounts[0].amount;
 
+        // Emitting the message received event can also include the decoded token address if necessary
         emit MessageReceived(
             any2EvmMessage.messageId,
-            any2EvmMessage.sourceChainSelector, // fetch the source chain identifier (aka selector)
-            abi.decode(any2EvmMessage.sender, (address)), // abi-decoding of the sender address,
-            abi.decode(any2EvmMessage.data, (string)),
+            any2EvmMessage.sourceChainSelector,
+            abi.decode(any2EvmMessage.sender, (address)),
+            decodedText,
             any2EvmMessage.destTokenAmounts[0].token,
             any2EvmMessage.destTokenAmounts[0].amount
         );
@@ -334,11 +341,12 @@ contract TransferorWithCalls is CCIPReceiver, OwnerIsCreator {
             token: _token,
             amount: _amount
         });
+        address tokenAddress = address(_token);
         // Create an EVM2AnyMessage struct in memory with necessary information for sending a cross-chain message
         return
             Client.EVM2AnyMessage({
                 receiver: abi.encode(_receiver), // ABI-encoded receiver address
-                data: abi.encodeWithSignature(_text, address(_token)), // ABI-encoded string
+                data: abi.encodeWithSignature(_text, tokenAddress), // ABI-encoded string
                 tokenAmounts: tokenAmounts, // The amount and type of token being transferred
                 extraArgs: Client._argsToBytes(
                     // Additional arguments, setting gas limit
@@ -394,5 +402,10 @@ contract TransferorWithCalls is CCIPReceiver, OwnerIsCreator {
     ) public view returns (uint256 balance) {
         IERC20 token = IERC20(_token);
         return token.balanceOf(address(this));
+    }
+
+    function getEthBalance() public returns (uint256 balance) {
+        balance = address(this).balance;
+        emit EthBalance(balance);        
     }
 }

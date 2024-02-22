@@ -10,6 +10,7 @@ import {StdCheats} from "forge-std/StdCheats.sol";
 import {MockCCIPRouter} from "test/mock/MockRouter.sol";
 import {MockLinkToken, MockCCIPBnMToken} from "test/mock/DummyTokens.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SimpleStorage} from "test/mock/SimpleStorage.sol";
 
 contract UnitTests is StdCheats, Test {
     TokenTransferor public tokenTransferor;
@@ -20,6 +21,7 @@ contract UnitTests is StdCheats, Test {
     MockCCIPRouter public router;
     MockLinkToken public linkToken;
     MockCCIPBnMToken public ccipBnM;
+    SimpleStorage public storageContract;
 
     ////////// CONSTANTS //////////
     uint256 public constant TOKEN_MINT_BALANCE = 100e18;
@@ -36,6 +38,7 @@ contract UnitTests is StdCheats, Test {
         router = new MockCCIPRouter();
         linkToken = new MockLinkToken();
         ccipBnM = new MockCCIPBnMToken();
+        storageContract = new SimpleStorage();
 
         tokenTransferor = new TokenTransferor(
             address(router),
@@ -44,12 +47,14 @@ contract UnitTests is StdCheats, Test {
 
         receiver = new ProgrammableTokenTransfers(
             address(router),
-            address(linkToken)
+            address(linkToken),
+            address(storageContract)
         );
 
         sender = new ProgrammableTokenTransfers(
             address(router),
-            address(linkToken)
+            address(linkToken),
+            address(storageContract)
         );
 
         receiverWithCalls = new TransferorWithCalls(
@@ -251,6 +256,14 @@ contract UnitTests is StdCheats, Test {
             address(ccipBnM),
             uint256(TOKEN_TRANSFER_AMOUNT)
         );
+        receiverWithCalls.getLastReceivedMessageDetails();
+        uint256 balance = receiverWithCalls.getTokenBalance(address(ccipBnM));
+        console2.log("Receiver Balance: ", balance);
+        assertEq(
+            balance,
+            TOKEN_TRANSFER_AMOUNT,
+            "Receiver does not have the correct amount of tokens"
+        );
     }
 
     function testDirectCallForTokenBalance() public {
@@ -261,6 +274,63 @@ contract UnitTests is StdCheats, Test {
             balance,
             TOKEN_MINT_BALANCE,
             "Receiver does not have the correct amount of tokens"
+        );
+    }
+
+    function testCallGetReceiverEthBalance() public {
+        trasferTokensToReceiverWithCalls();
+        vm.deal(address(receiverWithCalls), TOKEN_MINT_BALANCE);
+        uint256 balance = receiverWithCalls.getEthBalance();
+        console2.log("Receiver Ether Balance: ", balance);
+        assertEq(
+            balance,
+            TOKEN_MINT_BALANCE,
+            "Receiver does not have the correct amount of ether"
+        );
+    }
+
+    function testDirectCall_getEthBalance_NoCCIP() public {
+        vm.deal(address(receiver), TOKEN_MINT_BALANCE);
+        uint256 balance = receiver.getEthBalance();
+        console2.log("Receiver Balance: ", balance);
+        assertEq(
+            balance,
+            TOKEN_MINT_BALANCE,
+            "Receiver does not have the correct amount of tokens"
+        );
+    }
+
+    function testCall_getEthBalance_OverCCIP() public {
+        vm.deal(address(receiver), TOKEN_MINT_BALANCE);
+        transferTokensToSender();
+        string memory messageSent = "getEthBalance()";
+        sender.sendMessagePayLINK(
+            uint64(12532609583862916517),
+            address(receiver),
+            string(messageSent),
+            address(ccipBnM),
+            uint256(TOKEN_TRANSFER_AMOUNT)
+        );
+
+    }
+    function testSetAndRetrieveStorageDirectly() public {
+        storageContract.store(100);
+        uint256 storedValue = storageContract.retrieve();
+        console2.log("Stored Value: ", storedValue);
+        assertEq(storedValue, 100, "Stored value is not correct");
+    }
+
+    function testRetrieveStoratageOverCCIP() public {
+        storageContract.store(100);
+        vm.deal(address(receiver), TOKEN_MINT_BALANCE);
+        transferTokensToSender();
+        string memory messageSent = "retrieve()";
+        sender.sendMessagePayLINK(
+            uint64(12532609583862916517),
+            address(receiver),
+            string(messageSent),
+            address(ccipBnM),
+            uint256(TOKEN_TRANSFER_AMOUNT)
         );
     }
 }

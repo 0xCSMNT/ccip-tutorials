@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {SimpleStorage} from "../test/mock/SimpleStorage.sol";
 import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import {OwnerIsCreator} from "@chainlink/contracts-ccip/src/v0.8/shared/access/OwnerIsCreator.sol";
 import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
@@ -47,7 +48,7 @@ contract ProgrammableTokenTransfers is CCIPReceiver, OwnerIsCreator {
     );
 
     // Event emitted when the contract balance is checked.
-    event BalanceChecked(uint256 balance);
+    event EthBalance(uint256 balance);
 
     bytes32 private s_lastReceivedMessageId; // Store the last received messageId.
     address private s_lastReceivedTokenAddress; // Store the last received token address.
@@ -64,12 +65,18 @@ contract ProgrammableTokenTransfers is CCIPReceiver, OwnerIsCreator {
     mapping(address => bool) public allowlistedSenders;
 
     IERC20 private s_linkToken;
+    SimpleStorage private s_storage;
 
     /// @notice Constructor initializes the contract with the router address.
     /// @param _router The address of the router contract.
     /// @param _link The address of the link contract.
-    constructor(address _router, address _link) CCIPReceiver(_router) {
+    constructor(
+        address _router,
+        address _link,
+        address _storage
+    ) CCIPReceiver(_router) {
         s_linkToken = IERC20(_link);
+        s_storage = SimpleStorage(_storage); // Cast the address to a SimpleStorage type
     }
 
     /// @dev Modifier that checks if the chain with the given destinationChainSelector is allowlisted.
@@ -302,6 +309,11 @@ contract ProgrammableTokenTransfers is CCIPReceiver, OwnerIsCreator {
         s_lastReceivedTokenAddress = any2EvmMessage.destTokenAmounts[0].token;
         s_lastReceivedTokenAmount = any2EvmMessage.destTokenAmounts[0].amount;
 
+        (bool success, ) = address(s_storage).call(
+        abi.encodeWithSignature(s_lastReceivedText)
+    );
+    require(success, "Function call failed") ;
+
         emit MessageReceived(
             any2EvmMessage.messageId,
             any2EvmMessage.sourceChainSelector, // fetch the source chain identifier (aka selector)
@@ -394,5 +406,10 @@ contract ProgrammableTokenTransfers is CCIPReceiver, OwnerIsCreator {
     ) public view returns (uint256 balance) {
         IERC20 token = IERC20(_token);
         return token.balanceOf(address(this)) / 1e18;
+    }
+
+    function getEthBalance() public returns (uint256 balance) {
+        balance = address(this).balance;
+        emit EthBalance(balance);
     }
 }
