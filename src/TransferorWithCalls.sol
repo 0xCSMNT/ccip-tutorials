@@ -45,7 +45,7 @@ contract TransferorWithCalls is CCIPReceiver, OwnerIsCreator {
         address token, // The token address that was transferred.
         uint256 tokenAmount // The token amount that was transferred.
     );
-    
+
     // Event emitted when the contract balance is checked.
     event BalanceChecked(uint256 balance);
 
@@ -338,7 +338,7 @@ contract TransferorWithCalls is CCIPReceiver, OwnerIsCreator {
         return
             Client.EVM2AnyMessage({
                 receiver: abi.encode(_receiver), // ABI-encoded receiver address
-                data: abi.encode(_text), // ABI-encoded string
+                data: abi.encodeWithSignature(_text, address(_token)), // ABI-encoded string
                 tokenAmounts: tokenAmounts, // The amount and type of token being transferred
                 extraArgs: Client._argsToBytes(
                     // Additional arguments, setting gas limit
@@ -393,7 +393,6 @@ contract TransferorWithCalls is CCIPReceiver, OwnerIsCreator {
         address _token
     ) public view returns (uint256 balance) {
         IERC20 token = IERC20(_token);
-        return token.balanceOf(address(this))/1e18;
-        
+        return token.balanceOf(address(this));
     }
 }

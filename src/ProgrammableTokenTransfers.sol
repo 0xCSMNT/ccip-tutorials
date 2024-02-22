@@ -45,7 +45,7 @@ contract ProgrammableTokenTransfers is CCIPReceiver, OwnerIsCreator {
         address token, // The token address that was transferred.
         uint256 tokenAmount // The token amount that was transferred.
     );
-    
+
     // Event emitted when the contract balance is checked.
     event BalanceChecked(uint256 balance);
 
@@ -393,7 +393,6 @@ contract ProgrammableTokenTransfers is CCIPReceiver, OwnerIsCreator {
         address _token
     ) public view returns (uint256 balance) {
         IERC20 token = IERC20(_token);
-        return token.balanceOf(address(this))/1e18;
-        
+        return token.balanceOf(address(this)) / 1e18;
     }
 }

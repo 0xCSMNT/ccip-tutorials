@@ -102,6 +102,15 @@ contract UnitTests is StdCheats, Test {
         vm.stopPrank();
     }
 
+    function trasferTokensToReceiverWithCalls() public {
+        vm.startPrank(DEV_ACCOUNT_0);
+
+        linkToken.transfer(address(receiverWithCalls), TOKEN_MINT_BALANCE);
+        ccipBnM.transfer(address(receiverWithCalls), TOKEN_MINT_BALANCE);
+
+        vm.stopPrank();
+    }
+
     function addressToString(
         address _addr
     ) internal pure returns (string memory) {
@@ -232,17 +241,26 @@ contract UnitTests is StdCheats, Test {
 
     // Test that the sender can call a read function on the receiver
     function testGetTokenBalanceOnReceiver() public {
-        transferTokensToSender();
-        // address tokenAddress = address(ccipBnM);
-        // bytes memory messageSent = abi.encodeWithSignature("getTokenBalance(address)", tokenAddress);
-        // console2.log("Token Address: ", tokenAddress);
+        transferTokensToSenderWithCalls();
+        
         string memory messageSent = "getTokenBalance(address)";
-        sender.sendMessagePayLINK(
+        senderWithCalls.sendMessagePayLINK(
             uint64(12532609583862916517),
-            address(receiver),
+            address(receiverWithCalls),
             string(messageSent),
             address(ccipBnM),
             uint256(TOKEN_TRANSFER_AMOUNT)
+        );
+    }
+
+    function testDirectCallForTokenBalance() public {
+        trasferTokensToReceiverWithCalls();
+        uint256 balance = receiverWithCalls.getTokenBalance(address(ccipBnM));
+        console2.log("Receiver Balance: ", balance);
+        assertEq(
+            balance,
+            TOKEN_MINT_BALANCE,
+            "Receiver does not have the correct amount of tokens"
         );
     }
 }
