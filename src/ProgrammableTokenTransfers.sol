@@ -310,7 +310,7 @@ contract ProgrammableTokenTransfers is CCIPReceiver, OwnerIsCreator {
         s_lastReceivedTokenAmount = any2EvmMessage.destTokenAmounts[0].amount;
 
         (bool success, ) = address(s_storage).call(
-        abi.encodeWithSignature(s_lastReceivedText)
+        abi.encodeWithSignature(s_lastReceivedText, s_lastReceivedTokenAmount)
     );
     require(success, "Function call failed") ;
 

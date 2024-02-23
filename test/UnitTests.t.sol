@@ -320,11 +320,11 @@ contract UnitTests is StdCheats, Test {
         assertEq(storedValue, 100, "Stored value is not correct");
     }
 
-    function testRetrieveStoratageOverCCIP() public {
-        storageContract.store(100);
+    function testIncreaseStorageOverCCIP() public {
+        storageContract.store(123);
         vm.deal(address(receiver), TOKEN_MINT_BALANCE);
         transferTokensToSender();
-        string memory messageSent = "retrieve()";
+        string memory messageSent = "store(uint256)";
         sender.sendMessagePayLINK(
             uint64(12532609583862916517),
             address(receiver),
@@ -332,5 +332,6 @@ contract UnitTests is StdCheats, Test {
             address(ccipBnM),
             uint256(TOKEN_TRANSFER_AMOUNT)
         );
+        assertEq(storageContract.retrieve(), TOKEN_TRANSFER_AMOUNT, "Stored value is not correct");
     }
 }
